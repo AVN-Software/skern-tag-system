@@ -160,6 +160,54 @@ def analyze_tag_image(image: Image.Image) -> dict:
     return results
 
 # ───────────────────────────────────────────────────────────────────────────────
+# PAGE CONFIG
+# ───────────────────────────────────────────────────────────────────────────────
+st.set_page_config(page_title="Skern Tag Generator", layout="wide")
+
+st.title("🛡️ Skern Garment Authentication System")
+
+# ───────────────────────────────────────────────────────────────────────────────
+# MODE SELECTION
+# ───────────────────────────────────────────────────────────────────────────────
+tab1, tab2 = st.tabs(["🏭 Generate Tags", "📱 Scan & Verify"])
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 1: GENERATE TAGS
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab1:
+    st.markdown("Generate secure, unique tags with high-contrast colors for camera detection")
+
+    # ───────────────────────────────────────────────────────────────────────────────
+    # BATCH CONFIGURATION
+    # ───────────────────────────────────────────────────────────────────────────────
+    st.markdown("### Batch Configuration")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        batch_year_short = st.text_input("Year (short)", value="26", max_chars=2)
+    with col2:
+        factory_code = st.text_input("Factory Code", value="A", max_chars=3)
+    with col3:
+        batch_sequence = st.text_input("Batch Sequence", value="001", max_chars=3)
+
+    batch_code = f"B{batch_year_short}{factory_code.upper()}{batch_sequence.zfill(3)}"
+    st.markdown(f"**Current Batch Code:** `{batch_code}`")
+
+    # ───────────────────────────────────────────────────────────────────────────────
+    # TAG DESIGN SETTINGS
+    # ───────────────────────────────────────────────────────────────────────────────
+    st.markdown("### Tag Design Settings")
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        tag_size_px = st.slider("Tag Resolution (pixels)", 800, 1600, 1200)
+    with col_b:
+        qr_percentage = st.slider("QR Size (% of tag)", 70, 90, 75)
+    with col_c:
+        print_size_mm = st.selectbox("Physical Print Size", 
+                                     options=[30, 35, 40, 45, 50], 
+                                     index=2, 
+                                     format_func=lambda x: f"{x}×{x} mm")
+
+# ───────────────────────────────────────────────────────────────────────────────
 # GENERATION FUNCTIONS
 # ───────────────────────────────────────────────────────────────────────────────
 
@@ -182,7 +230,7 @@ def generate_secret_bundle(batch_code: str) -> dict:
         "serial_number": serial_number
     }
 
-def generate_qr_layer(cert_id: str, qr_size: int, canvas_size: int, qr_percentage: int) -> Image.Image:
+def generate_qr_layer(cert_id: str, qr_size: int, canvas_size: int) -> Image.Image:
     url = f"https://skern.com/verify?id={cert_id}"
     qr = qrcode.QRCode(version=10, error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=12, border=4)
     qr.add_data(url)
@@ -302,66 +350,13 @@ def add_text_layer(base_img: Image.Image, cert_id: str, serial_number: str) -> I
         font_small = ImageFont.load_default()
     
     w, h = base_img.size
-    # Use textbbox for accurate text measurement
-    text_bbox = draw.textbbox((0,0), cert_id, font=font_large)
-    text_w = text_bbox[2] - text_bbox[0]
-    text_h = text_bbox[3] - text_bbox[1]
-    
+    text_w, _ = draw.textbbox((0,0), cert_id, font=font_large)[2:]
     draw.text(((w - text_w)//2, h - 120), cert_id, fill=(0,0,0,255), font=font_large)
     
-    s_bbox = draw.textbbox((0,0), serial_number, font=font_small)
-    s_w = s_bbox[2] - s_bbox[0]
+    s_w, _ = draw.textbbox((0,0), serial_number, font=font_small)[2:]
     draw.text(((w - s_w)//2, h - 60), serial_number, fill=(80,80,80,255), font=font_small)
     
     return base_img
-
-# ───────────────────────────────────────────────────────────────────────────────
-# PAGE CONFIG
-# ───────────────────────────────────────────────────────────────────────────────
-st.set_page_config(page_title="Skern Tag Generator", layout="wide")
-
-st.title("🛡️ Skern Garment Authentication System")
-
-# ───────────────────────────────────────────────────────────────────────────────
-# MODE SELECTION
-# ───────────────────────────────────────────────────────────────────────────────
-tab1, tab2 = st.tabs(["🏭 Generate Tags", "📱 Scan & Verify"])
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# TAB 1: GENERATE TAGS
-# ═══════════════════════════════════════════════════════════════════════════════
-with tab1:
-    st.markdown("Generate secure, unique tags with high-contrast colors for camera detection")
-
-    # ───────────────────────────────────────────────────────────────────────────────
-    # BATCH CONFIGURATION
-    # ───────────────────────────────────────────────────────────────────────────────
-    st.markdown("### Batch Configuration")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        batch_year_short = st.text_input("Year (short)", value="26", max_chars=2)
-    with col2:
-        factory_code = st.text_input("Factory Code", value="A", max_chars=3)
-    with col3:
-        batch_sequence = st.text_input("Batch Sequence", value="001", max_chars=3)
-
-    batch_code = f"B{batch_year_short}{factory_code.upper()}{batch_sequence.zfill(3)}"
-    st.markdown(f"**Current Batch Code:** `{batch_code}`")
-
-    # ───────────────────────────────────────────────────────────────────────────────
-    # TAG DESIGN SETTINGS
-    # ───────────────────────────────────────────────────────────────────────────────
-    st.markdown("### Tag Design Settings")
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        tag_size_px = st.slider("Tag Resolution (pixels)", 800, 1600, 1200)
-    with col_b:
-        qr_percentage = st.slider("QR Size (% of tag)", 70, 90, 75)
-    with col_c:
-        print_size_mm = st.selectbox("Physical Print Size", 
-                                     options=[30, 35, 40, 45, 50], 
-                                     index=2, 
-                                     format_func=lambda x: f"{x}×{x} mm")
 
     # ───────────────────────────────────────────────────────────────────────────────
     # GENERATE BUTTON
@@ -380,7 +375,7 @@ with tab1:
             # 3. Guilloche (printed on top of grid)
             # 4. Border (printed on top of guilloche)
             layers = [
-                generate_qr_layer(bundle["cert_id"], qr_pixel, tag_size_px, qr_percentage),
+                generate_qr_layer(bundle["cert_id"], qr_pixel, tag_size_px),
                 generate_grid_layer(qr_pixel, tag_size_px),
                 generate_guilloche_underlay(qr_pixel, bundle["guilloche_id"], tag_size_px),
                 generate_corner_border_layer(qr_pixel, bundle["border_id"], tag_size_px),
@@ -392,10 +387,8 @@ with tab1:
             
             final_tag = add_text_layer(final_tag, bundle["cert_id"], bundle["serial_number"])
             
-            # Convert to RGB for PDF saving (PDF doesn't support RGBA)
-            final_tag_rgb = final_tag.convert("RGB")
             pdf_buffer = io.BytesIO()
-            final_tag_rgb.save(pdf_buffer, format="PDF", resolution=600.0)
+            final_tag.save(pdf_buffer, format="PDF", resolution=600.0)
             pdf_buffer.seek(0)
         
         col_left, col_right = st.columns([1, 2])
@@ -488,48 +481,47 @@ with tab2:
                 st.markdown("#### 🛡️ Verification Status")
                 
                 # Verify against database
-                tag_data = None
                 if analysis['qr_cert_id']:
                     tag_data = verify_tag_in_db(analysis['qr_cert_id'])
-                
-                if tag_data and analysis['overall_valid']:
-                    # AUTHENTIC TAG
-                    st.success("**✅ AUTHENTIC TAG**")
-                    st.markdown(f"""
-                    **Tag Information:**
-                    - **Batch Code**: {tag_data['batch_code']}
-                    - **Certificate ID**: {tag_data['cert_id']}
-                    - **Serial Number**: {tag_data['serial_number']}
-                    - **Guilloche ID**: {tag_data['guilloche_id'][:16]}...
-                    - **Border ID**: {tag_data['border_id'][:16]}...
-                    - **Generated**: {tag_data['created_at']}
-                    - **Scan Time**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-                    - **Status**: ✅ Verified Authentic
-                    """)
                     
-                    st.balloons()
-                    
-                elif tag_data and not analysis['overall_valid']:
-                    # Tag in DB but components missing
-                    st.warning("**⚠️ SUSPICIOUS - Incomplete Components**")
-                    st.markdown("""
-                    The QR code is registered in our database, but some security features are missing or damaged.
-                    This could indicate:
-                    - Poor quality photo (retake with better lighting)
-                    - Damaged/worn tag
-                    - Potential counterfeit attempt
-                    """)
-                    
-                elif analysis['qr_cert_id'] and not tag_data:
-                    # QR code not in database
-                    st.error("**❌ COUNTERFEIT - Not Registered**")
-                    st.markdown(f"""
-                    This tag's certificate ID is **NOT** registered in our database.
-                    
-                    **Detected ID**: {analysis['qr_cert_id']}
-                    
-                    **This is likely a counterfeit product.**
-                    """)
+                    if tag_data and analysis['overall_valid']:
+                        # AUTHENTIC TAG
+                        st.success("**✅ AUTHENTIC TAG**")
+                        st.markdown(f"""
+                        **Tag Information:**
+                        - **Batch Code**: {tag_data['batch_code']}
+                        - **Certificate ID**: {tag_data['cert_id']}
+                        - **Serial Number**: {tag_data['serial_number']}
+                        - **Guilloche ID**: {tag_data['guilloche_id'][:16]}...
+                        - **Border ID**: {tag_data['border_id'][:16]}...
+                        - **Generated**: {tag_data['created_at']}
+                        - **Scan Time**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+                        - **Status**: ✅ Verified Authentic
+                        """)
+                        
+                        st.balloons()
+                        
+                    elif tag_data and not analysis['overall_valid']:
+                        # Tag in DB but components missing
+                        st.warning("**⚠️ SUSPICIOUS - Incomplete Components**")
+                        st.markdown("""
+                        The QR code is registered in our database, but some security features are missing or damaged.
+                        This could indicate:
+                        - Poor quality photo (retake with better lighting)
+                        - Damaged/worn tag
+                        - Potential counterfeit attempt
+                        """)
+                        
+                    else:
+                        # QR code not in database
+                        st.error("**❌ COUNTERFEIT - Not Registered**")
+                        st.markdown(f"""
+                        This tag's certificate ID is **NOT** registered in our database.
+                        
+                        **Detected ID**: {analysis['qr_cert_id']}
+                        
+                        **This is likely a counterfeit product.**
+                        """)
                 else:
                     # No QR code detected
                     st.error("**❌ SCAN FAILED - No QR Code Detected**")
@@ -545,16 +537,6 @@ with tab2:
                 
                 # Download report button
                 if analysis['qr_cert_id']:
-                    verification_result = ""
-                    if tag_data and analysis['overall_valid']:
-                        verification_result = "AUTHENTIC"
-                    elif tag_data and not analysis['overall_valid']:
-                        verification_result = "SUSPICIOUS"
-                    elif analysis['qr_cert_id'] and not tag_data:
-                        verification_result = "COUNTERFEIT"
-                    else:
-                        verification_result = "SCAN_FAILED"
-                    
                     report_data = {
                         'scan_time': datetime.now().isoformat(),
                         'cert_id': analysis['qr_cert_id'],
@@ -564,14 +546,14 @@ with tab2:
                             'grid': analysis['grid_detected'],
                             'corners': analysis['corners_detected']
                         },
-                        'verification_result': verification_result
+                        'verification_result': 'AUTHENTIC' if (tag_data and analysis['overall_valid']) else 'FAILED'
                     }
                     
                     report_json = json.dumps(report_data, indent=2)
                     st.download_button(
                         label="📥 Download Verification Report (JSON)",
                         data=report_json,
-                        file_name=f"verification_report_{analysis['qr_cert_id'] if analysis['qr_cert_id'] else 'unknown'}.json",
+                        file_name=f"verification_report_{analysis['qr_cert_id']}.json",
                         mime="application/json",
                         use_container_width=True
                     )
