@@ -5,7 +5,7 @@ numpy
 reportlab
 scipy
 
-opencv-python
+opencv-python-headless
 pyzbar
 numpy
 qrcode
